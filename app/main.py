@@ -3,6 +3,9 @@
 import logging
 import os
 import secrets
+import threading
+import time
+from collections import deque
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -58,6 +61,54 @@ def require_api_key(x_api_key: str | None = Header(default=None)) -> None:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
+class RateLimiter:
+    """Sliding-window limit of `limit` requests per `window` seconds per client."""
+
+    MAX_TRACKED_CLIENTS = 10_000
+
+    def __init__(self, limit: int, window: float = 60.0) -> None:
+        self.limit = limit
+        self.window = window
+        self._hits: dict[str, deque[float]] = {}
+        self._lock = threading.Lock()
+
+    def allow(self, client: str) -> bool:
+        now = time.monotonic()
+        with self._lock:
+            if len(self._hits) > self.MAX_TRACKED_CLIENTS:
+                self._forget_idle(now)
+            hits = self._hits.setdefault(client, deque())
+            while hits and now - hits[0] >= self.window:
+                hits.popleft()
+            if len(hits) >= self.limit:
+                return False
+            hits.append(now)
+            return True
+
+    def _forget_idle(self, now: float) -> None:
+        for client in [c for c, h in self._hits.items() if not h or now - h[-1] >= self.window]:
+            del self._hits[client]
+
+
+def client_ip(request: Request) -> str:
+    """The caller's address. Behind the Caddy proxy it is the last X-Forwarded-For entry,
+    which Caddy sets itself; the API port is not exposed directly in the deployment."""
+    forwarded = request.headers.get("x-forwarded-for")
+    if forwarded:
+        return forwarded.split(",")[-1].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def rate_limit(request: Request) -> None:
+    limiter: RateLimiter | None = request.app.state.rate_limiter
+    if limiter is not None and not limiter.allow(client_ip(request)):
+        raise HTTPException(
+            status_code=429,
+            detail="Too many requests, try again in a minute",
+            headers={"Retry-After": str(int(limiter.window))},
+        )
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="JIT Defect Prediction API",
@@ -67,6 +118,8 @@ def create_app() -> FastAPI:
         ),
         lifespan=lifespan,
     )
+    per_minute = int(os.environ.get("RATE_LIMIT_PER_MIN", "60"))
+    app.state.rate_limiter = RateLimiter(per_minute) if per_minute > 0 else None
 
     @app.exception_handler(Exception)
     async def unhandled_exception(request: Request, exc: Exception) -> JSONResponse:
@@ -80,7 +133,7 @@ def create_app() -> FastAPI:
             "model_version": request.app.state.metadata["model_version"],
         }
 
-    @app.post("/predict", response_model=Prediction, dependencies=[Depends(require_api_key)])
+    @app.post("/predict", response_model=Prediction, dependencies=[Depends(require_api_key), Depends(rate_limit)])
     def predict(commit: CommitMetrics, request: Request) -> Prediction:
         frame = pd.DataFrame([commit.model_dump()], columns=RAW_FEATURES)
         score = float(request.app.state.model.score(frame)[0])

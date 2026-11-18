@@ -2,26 +2,37 @@
   "name": "jit-commit-risk",
   "displayName": "JIT Commit Risk Analyzer",
   "description": "Analyze Git commit risk using machine learning, with automatic commit scoring and on-demand analysis of staged changes and previous commits.",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "Janahan",
+  "license": "MIT",
   "icon": "images/icon.png",
-"keywords": [
-  "commit risk",
-  "machine learning",
-  "git",
-  "software quality",
-  "defect prediction",
-  "deep learning"
-],
-"galleryBanner": {
-  "color": "#18233A",
-  "theme": "dark"
-},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Jana1805/jit-commit-risk.git",
+    "directory": "vscode-extension"
+  },
+  "homepage": "https://github.com/Jana1805/jit-commit-risk/tree/main/vscode-extension#readme",
+  "bugs": {
+    "url": "https://github.com/Jana1805/jit-commit-risk/issues"
+  },
+  "keywords": [
+    "commit risk",
+    "machine learning",
+    "git",
+    "software quality",
+    "defect prediction",
+    "deep learning"
+  ],
+  "galleryBanner": {
+    "color": "#18233A",
+    "theme": "dark"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
   "categories": [
-    "Other"
+    "Other",
+    "Machine Learning"
   ],
   "activationEvents": [
     "onStartupFinished"
@@ -47,12 +58,12 @@
         "jitRisk.apiUrl": {
           "type": "string",
           "default": "http://localhost:8000",
-          "description": "Base URL of the risk prediction API."
+          "description": "Base URL of the risk prediction API. The default is the public hosted API; change it only if you run your own."
         },
         "jitRisk.apiKey": {
           "type": "string",
           "default": "",
-          "description": "Sent as the X-API-Key header, if the API requires one."
+          "description": "Only for self-hosted APIs that require a key: sent as the X-API-Key header. Leave empty for the public API."
         },
         "jitRisk.notify": {
           "type": "string",
@@ -77,7 +88,7 @@
     "watch": "tsc -watch -p .",
     "test": "tsc -p . && node --test \"out/test/**/*.test.js\"",
     "calibrate": "tsc -p . && node out/calibrate.js",
-    "package": "vsce package --allow-missing-repository --skip-license",
+    "package": "vsce package",
     "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {
@@ -86,5 +97,4 @@
     "@vscode/vsce": "^3.0.0",
     "typescript": "^5.5.0"
   }
-  
 }

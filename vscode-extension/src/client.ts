@@ -37,6 +37,9 @@ export async function predict(metrics: CommitMetrics, options: ClientOptions): P
         body: JSON.stringify(toPayload(metrics)),
         signal: AbortSignal.timeout(options.timeoutMs),
     });
+    if (response.status === 429) {
+        throw new Error('Risk API is busy (rate limit reached), try again in a minute');
+    }
     if (!response.ok) {
         throw new Error(`Risk API returned ${response.status}`);
     }

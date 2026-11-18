@@ -1,4 +1,4 @@
-# JIT Commit Risk
+# JIT Commit Risk Analyzer
 
 Shows a bug-risk score in the status bar each time you commit.
 
@@ -6,6 +6,8 @@ The extension computes 12 change metrics from your local git history (lines
 changed, files touched, how often and by whom those files changed before, and
 the author's experience) and sends those 12 numbers to a prediction API. No
 source code, file names or commit messages leave your machine.
+
+Works out of the box: install it, open a git repository, and commit.
 
 ## Use
 
@@ -18,17 +20,26 @@ source code, file names or commit messages leave your machine.
 
 | Setting | Default | Meaning |
 |---|---|---|
-| `jitRisk.apiUrl` | `http://localhost:8000` | Base URL of the prediction API |
-| `jitRisk.apiKey` | empty | Sent as `X-API-Key` if the API requires one |
+| `jitRisk.apiUrl` | public hosted API | Base URL of the prediction API |
+| `jitRisk.apiKey` | empty | Only for a self-hosted API that requires a key |
 | `jitRisk.notify` | `risky` | Notify for `risky` commits, `always`, or `never` |
 | `jitRisk.timeoutMs` | `8000` | How long to wait for the API |
 
+## Privacy
+
+Only the 12 numeric metrics are sent, over HTTPS, to the API in
+`jitRisk.apiUrl`. The public API does not store them. It allows 60 scores per
+minute per IP address. To keep everything on your own machine or server, run
+the API yourself from the
+[repository](https://github.com/Jana1805/jit-commit-risk) and point
+`jitRisk.apiUrl` at it.
+
 ## Reading the score
 
-The score is a review hint. At the model's threshold, about one in three
-flagged commits in the test data was actually bug-inducing. The model was
-trained on 14 Apache Java projects, so treat scores on other kinds of
-repository as indicative only.
+The score is a review hint, not a merge gate. At the model's threshold, about
+one in three flagged commits in the test data was actually bug-inducing. The
+model was trained on 14 Apache Java projects, so treat scores on other kinds
+of repository as indicative only.
 
 ## Develop
 
@@ -42,3 +53,7 @@ Press F5 in this folder to try the extension in a development window.
 
 `npm run calibrate -- <repo> <apachejit_total.csv> <project>` compares the
 metrics computed here with the dataset's values for a cloned Apache project.
+
+## License
+
+MIT

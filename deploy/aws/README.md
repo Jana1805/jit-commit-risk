@@ -19,15 +19,17 @@ Cost: about $12/month (instance ~$7.6, public IP ~$3.6, 10 GB disk ~$0.8).
    ```
 
 3. Enter an email for the budget alert when asked (or press Enter to skip).
-4. When it finishes it prints the API URL and API key. Put them in VS Code
-   settings as `jitRisk.apiUrl` and `jitRisk.apiKey`.
+4. When it finishes it prints the API URL. The API is open (no key) and
+   `/predict` is limited to 60 requests per minute per IP. To change the
+   limit, put `RATE_LIMIT_PER_MIN=120` in `/opt/jit/api.env` on the server
+   and run `redeploy.sh`.
 
 ## Check it
 
 ```bash
 curl https://<ip>.sslip.io/health
 curl -X POST https://<ip>.sslip.io/predict \
-  -H 'Content-Type: application/json' -H 'X-API-Key: <key>' \
+  -H 'Content-Type: application/json' \
   -d '{"la":120,"ld":30,"nf":4,"nd":2,"ns":1,"ent":1.2,"ndev":3,"age":10.5,"nuc":5,"aexp":200,"arexp":50,"asexp":80}'
 ```
 

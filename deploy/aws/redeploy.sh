@@ -10,7 +10,7 @@ INSTANCE_ID=$(aws ec2 describe-instances \
 
 CMD_ID=$(aws ssm send-command --instance-ids "$INSTANCE_ID" \
   --document-name AWS-RunShellScript \
-  --parameters 'commands=["/opt/jit/redeploy.sh"]' \
+  --parameters 'commands=["sed -i \"/^API_KEY=/d\" /opt/jit/api.env","/opt/jit/redeploy.sh"]' \
   --timeout-seconds 900 \
   --query Command.CommandId --output text)
 echo "Redeploying on $INSTANCE_ID (command $CMD_ID)..."

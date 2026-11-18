@@ -4,7 +4,7 @@ set -uo pipefail
 NAME="jit-commit-risk"
 ROLE="$NAME-ec2"
 
-read -r -p "Delete the $NAME server, IP address and API key? Type yes: " answer
+read -r -p "Delete the $NAME server and its IP address? Type yes: " answer
 [ "$answer" = "yes" ] || { echo "Cancelled."; exit 1; }
 
 IDS=$(aws ec2 describe-instances \
@@ -29,6 +29,7 @@ aws iam delete-instance-profile --instance-profile-name "$ROLE" 2>/dev/null
 aws iam detach-role-policy --role-name "$ROLE" --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore 2>/dev/null
 aws iam delete-role --role-name "$ROLE" 2>/dev/null && echo "Deleted IAM role $ROLE"
 
-aws ssm delete-parameter --name "/$NAME/api-key" 2>/dev/null && echo "Deleted API key parameter"
+# Older launch.sh versions stored an API key here.
+aws ssm delete-parameter --name "/$NAME/api-key" 2>/dev/null && echo "Deleted old API key parameter"
 
 echo "Done. (The budget alert, if created, is free and was kept.)"

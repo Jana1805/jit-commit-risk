@@ -213,6 +213,21 @@ def test_predict_requires_api_key_when_configured(client, monkeypatch):
     assert client.get("/health").status_code == 200  # health stays open
 
 
+def test_predict_is_rate_limited_per_client(artifact_dir, monkeypatch):
+    monkeypatch.setenv("MODEL_DIR", str(artifact_dir))
+    monkeypatch.setenv("RATE_LIMIT_PER_MIN", "2")
+    with TestClient(create_app()) as test_client:
+        alice = {"X-Forwarded-For": "203.0.113.1"}
+        bob = {"X-Forwarded-For": "203.0.113.2"}
+        assert test_client.post("/predict", json=SAFE_COMMIT, headers=alice).status_code == 200
+        assert test_client.post("/predict", json=SAFE_COMMIT, headers=alice).status_code == 200
+        limited = test_client.post("/predict", json=SAFE_COMMIT, headers=alice)
+        assert limited.status_code == 429
+        assert limited.headers["Retry-After"] == "60"
+        assert test_client.post("/predict", json=SAFE_COMMIT, headers=bob).status_code == 200
+        assert test_client.get("/health").status_code == 200  # health is not limited
+
+
 # ------------------------------------------------------- startup fail-fast
 
 def test_startup_fails_when_artifacts_missing(tmp_path, monkeypatch):

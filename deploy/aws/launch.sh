@@ -23,16 +23,6 @@ if [ -n "$existing" ]; then
   exit 1
 fi
 
-# --- API key (kept in SSM Parameter Store so you can read it again later) ---
-if API_KEY=$(aws ssm get-parameter --name "/$NAME/api-key" --with-decryption \
-      --query Parameter.Value --output text 2>/dev/null); then
-  echo "Reusing API key from SSM /$NAME/api-key"
-else
-  API_KEY=$(openssl rand -hex 24)
-  aws ssm put-parameter --name "/$NAME/api-key" --type SecureString --value "$API_KEY" >/dev/null
-  echo "Created API key in SSM /$NAME/api-key"
-fi
-
 # --- Security group: only HTTP/HTTPS in, no SSH ---
 VPC_ID=$(aws ec2 describe-vpcs --filters Name=is-default,Values=true --query 'Vpcs[0].VpcId' --output text)
 [ "$VPC_ID" != "None" ] || { echo "No default VPC in $REGION."; exit 1; }
@@ -76,7 +66,7 @@ echo "Elastic IP: $PUBLIC_IP  ->  $HOST"
 AMI_ID=$(aws ssm get-parameter --name /aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64 \
   --query Parameter.Value --output text)
 USER_DATA=$(mktemp)
-sed -e "s|__REPO_URL__|$REPO_URL|" -e "s|__HOST__|$HOST|" -e "s|__API_KEY__|$API_KEY|" \
+sed -e "s|__REPO_URL__|$REPO_URL|" -e "s|__HOST__|$HOST|" \
   "$HERE/user-data.sh" > "$USER_DATA"
 
 INSTANCE_ID=$(aws ec2 run-instances \
@@ -122,14 +112,9 @@ cat <<EOF
 
 ==================================================================
  API URL : https://$HOST
- API key : $API_KEY
  Docs    : https://$HOST/docs
+ (Open API, limited to 60 /predict requests per minute per IP.)
 
- VS Code settings:
-   "jitRisk.apiUrl": "https://$HOST",
-   "jitRisk.apiKey": "$API_KEY"
-
- Show key again : aws ssm get-parameter --name /$NAME/api-key --with-decryption --query Parameter.Value --output text
  Update after git push : bash deploy/aws/redeploy.sh
  Delete everything     : bash deploy/aws/teardown.sh
 ==================================================================

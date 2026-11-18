@@ -7,7 +7,6 @@ exec > >(tee -a /var/log/jit-setup.log) 2>&1
 
 REPO_URL="__REPO_URL__"
 HOST="__HOST__"
-API_KEY="__API_KEY__"
 
 # 1 GB swap: t3.micro has 1 GB RAM and pip install inside docker build needs headroom.
 if [ ! -f /swapfile ]; then
@@ -22,9 +21,9 @@ dnf install -y docker git
 systemctl enable --now docker
 
 mkdir -p /opt/jit
-umask 077
-printf 'API_KEY=%s\n' "$API_KEY" > /opt/jit/api.env
-umask 022
+# Extra environment for the API container (e.g. RATE_LIMIT_PER_MIN=120). Empty = defaults:
+# open API, 60 /predict requests per minute per client IP.
+touch /opt/jit/api.env
 
 if [ ! -d /opt/jit/repo/.git ]; then
   git clone --depth 1 "$REPO_URL" /opt/jit/repo
