@@ -57,7 +57,7 @@
       "properties": {
         "jitRisk.apiUrl": {
           "type": "string",
-          "default": "http://localhost:8000",
+          "default": "https://54-86-64-152.sslip.io",
           "description": "Base URL of the risk prediction API. The default is the public hosted API; change it only if you run your own."
         },
         "jitRisk.apiKey": {
